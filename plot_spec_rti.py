@@ -33,6 +33,7 @@ def read_atributos_from_dir(directory,start_time="00:00:00"):
     filtered_files = []
     for filename in hdf5_files:
         filepath = os.path.join(directory, filename)
+        print("filename:",filename)
         with h5py.File(filepath, "r") as obj:
             utc_time = np.array(obj["Data/utctime"])
             # Convertir a hora local (UTC-5)
@@ -46,40 +47,46 @@ def read_atributos_from_dir(directory,start_time="00:00:00"):
         raise ValueError(f"❌ No files found after start time: {start_time} (local time)")
 
     # 2. Limit to maximum 5 files (from those meeting time criteria)
-    filtered_files = filtered_files[:5]
+    filtered_files = filtered_files[:10]
 
-    # Procesar solo los archivos filtrados
+    # 3. Extract metadata ONLY ONCE (from the first valid file)
+    first_metadata_file = filtered_files[0][1]
+    with h5py.File(first_metadata_file, "r") as obj:
+        metadata = {key: np.array(obj[f"Metadata/{key}"]) for key in obj["Metadata"].keys()}
+
+        code = metadata.get("code")
+        nProfiles = metadata.get("nProfiles", 1)
+        nIncohInt = metadata.get("nIncohInt", 1)
+        nCohInt = metadata.get("nCohInt", 1)
+        windowOfFilter = metadata.get("windowOfFilter", 1)
+        pwcode = 1
+
+        if metadata.get("flagDecodeData", False):
+            pwcode = np.sum(code[0] ** 2)
+
+        normFactor = nProfiles * nIncohInt * nCohInt * pwcode * windowOfFilter
+
+    # 4. Read data from all files, Process only the filtered files
     for filename, filepath in filtered_files:
         with h5py.File(filepath, "r") as obj:
             var_path = "Data/data_spc"
             channel_names = sorted(obj[var_path].keys())
-
+            print("filename:" ,filename)
             if all_channel_names is None:
                 all_channel_names = channel_names
             elif channel_names != all_channel_names:
                 raise ValueError(f"⚠️ Channel mismatch in {filename}.")
 
             utc_time = np.array(obj["Data/utctime"])
-            data_list = [np.array(obj[f"{var_path}/{channel}"]) for channel in channel_names]
-            data_arr = np.stack(data_list, axis=0)
-            data_arr = np.moveaxis(data_arr, 1, 0)
+            try:
+                data_list = [np.array(obj[f"{var_path}/{channel}"]) for channel in channel_names]
+                data_arr = np.stack(data_list, axis=0)
+                data_arr = np.moveaxis(data_arr, 1, 0)
 
-            all_data.append(data_arr)
-            all_utc.append(utc_time)
-
-            metadata = {key: np.array(obj[f"Metadata/{key}"]) for key in obj["Metadata"].keys()}
-
-            code = metadata.get("code")
-            nProfiles = metadata.get("nProfiles", 1)
-            nIncohInt = metadata.get("nIncohInt", 1)
-            nCohInt = metadata.get("nCohInt", 1)
-            windowOfFilter = metadata.get("windowOfFilter", 1)
-            pwcode = 1
-
-            if metadata.get("flagDecodeData", False):
-                pwcode = np.sum(code[0] ** 2)
-
-            normFactor = nProfiles * nIncohInt * nCohInt * pwcode * windowOfFilter
+                all_data.append(data_arr)
+                all_utc.append(utc_time)
+            except:
+                print("filename error",filename)
 
     final_data = np.concatenate(all_data, axis=0)
     final_utc = np.concatenate(all_utc, axis=0)
@@ -592,6 +599,7 @@ if __name__ == "__main__":
     
     # Define the directory containing HDF5 data files
     directory = "/media/soporte/DATA/150kM_2/d2025087"
+    #directory = "/media/soporte/USB-124G/150kM_HDF5/main/d2025086"
     start_time= "08:00:00"
     # Read and process radar data from HDF5 files in the specified directory
     # Load radar data files:

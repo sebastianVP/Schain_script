@@ -21,3 +21,14 @@ Características principales:
 - Paquetes necesarios:
   ```bash
   pip install numpy matplotlib h5py pytz
+
+## Inicio Rápido
+Clona este repositorio
+
+git clone git@github.com:sebastianVP/Schain_script.git
+
+## Instala las dependencias:
+pip install -r requirements.txt
+
+## Uso - Comando Básico
+python plot_spec_rti.py

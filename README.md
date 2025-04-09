@@ -1,6 +1,6 @@
  Herramienta de Procesamiento de Datos de Radar
 
-![Ejemplo de Visualización de Radar](docs/ejemplo_grafico.png)
+![Ejemplo de Visualización de Radar](spectrogram_20250328_083036.png)
 
 ## Visión General
 Este conjunto de herramientas en Python procesa datos de radar en formato HDF5 para generar:
